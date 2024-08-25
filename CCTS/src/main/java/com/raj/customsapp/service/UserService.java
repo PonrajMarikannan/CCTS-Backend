@@ -7,4 +7,5 @@ public interface UserService {
     void addUser(User user);
     User findUserByEmail(String email);
 	User getUser(int id); 
+	void updatePassword(User user);
 }

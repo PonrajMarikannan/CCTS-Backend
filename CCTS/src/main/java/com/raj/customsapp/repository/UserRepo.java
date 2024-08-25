@@ -7,5 +7,6 @@ public interface UserRepo {
     void save(User user);
     User findByEmail(String email);
 	User findById(int id);
+	void update(User user);
 }
 

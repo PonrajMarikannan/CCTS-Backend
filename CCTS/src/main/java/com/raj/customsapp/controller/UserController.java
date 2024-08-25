@@ -3,8 +3,8 @@ package com.raj.customsapp.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
 import com.raj.customsapp.model.User;
 import com.raj.customsapp.serviceImpl.CustomMail;
 import com.raj.customsapp.serviceImpl.UserServiceImpl;
@@ -20,14 +20,18 @@ public class UserController {
     @Autowired
     private CustomMail mailservice;
     
+    
     @PostMapping("/register")
     public String addUser(@RequestBody User user) {
+    	
+    	BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
         try {
         	
         	if (user.getRole() == null || user.getRole().isEmpty()) {
                 user.setRole("client");
             }
-        	
+        	String encryptPassword = bcrypt.encode(user.getPassword());
+        	user.setPassword(encryptPassword);
             serviceimpl.addUser(user);
             return "Success";
         } catch (Exception e) {
@@ -37,13 +41,19 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody User user) {
+    	BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
         try {
             User UseredUser = serviceimpl.findUserByEmail(user.getEmail());
-            if (UseredUser != null && UseredUser.getPassword().equals(user.getPassword())) {
-             
-            	String role = UseredUser.getRole(); 
-            	int id = UseredUser.getUserId();
-                return ResponseEntity.ok(new LoginResponse(id,"LoginSuccess", role));
+            
+            if (UseredUser != null) {
+	            if(	bcrypt.matches(user.getPassword(),UseredUser.getPassword())) {
+	            	String role = UseredUser.getRole(); 
+	            	int id = UseredUser.getUserId();
+	            	return ResponseEntity.ok(new LoginResponse(id,"LoginSuccess", role));            	
+	            }
+	            else {
+	                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect credentials. Please try again.");
+	            }
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Incorrect credentials. Please try again.");
             }
@@ -52,24 +62,67 @@ public class UserController {
         }
     }
     
+    @GetMapping("{id}")
+	public User getUserById(@PathVariable("id") int id) {
+		return serviceimpl.getUser(id);
+	}
+    
+    @PutMapping("/updatePass")
+    public String updatePassword(
+            @RequestParam("userId") int  userId,
+            @RequestParam("currentPassword") String currentPassword,
+            @RequestParam("newPassword") String newPassword,
+            @RequestParam("confirmNewPassword") String confirmNewPassword) {
+
+        String msg;
+    	BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
+
+        User user =  serviceimpl.getUser(userId);
+        String old = user.getPassword();
+        try {
+	        if(bcrypt.matches(currentPassword, old)){
+	        	String encryptPassword = bcrypt.encode(newPassword);
+	        	user.setPassword(encryptPassword);
+	        	serviceimpl.updatePassword(user);
+				msg="Success";
+	        }
+	        else {
+	        	msg=" Password Does not Match!";
+	        }
+        }
+		catch(Exception e) {
+			msg="Failure";
+		}
+		return msg;
+	}
+    
+//    @GetMapping("/updatePass")
+//    public ResponseEntity<User> updatePassword(
+//       ) {
+//        // Your logic to update the password
+//        return ResponseEntity.ok(/* Return updated user or appropriate response */);
+//    }
+
+    
+    
     @PostMapping("/mail")
     public ResponseEntity<String> sendCustomEmail(@RequestBody EmailRequest emailRequest) {
         try {
         	String content = String.format(
-        		    "Hello %s,\n\n" +
+        		    "Dear %s,\n\n" +
         		    "Your account has been successfully created with CustomsGate.\n\n" +
         		    "Here are your login credentials:\n" +
         		    "Email: %s\n" +
         		    "Password: %s\n\n" +
         		    "For security reasons, we recommend changing your password after logging in for the first time. To do this, please follow these steps:\n" +
         		    "1. Log in to your account using the credentials provided.\n" +
-        		    "2. Go to the account settings page.\n" +
-        		    "3. Select the option to change your password.\n" +
+        		    "2. Go to the Change Password in Sidebar.\n" +
+        		    "3. Change your password.\n" +
         		    "4. Follow the instructions to set a new password.\n\n" +
         		    "If you have any questions or need assistance, feel free to contact our support team.\n\n" +
         		    "Best regards,\n" +
         		    "The CustomsGate Team",
-        		    emailRequest.getEmail().split("@")[0],  // Use the part of the email before the '@' as the username
+        		    emailRequest.getEmail().split("@")[0],
         		    emailRequest.getEmail(),
         		    emailRequest.getPassword()
         		);
@@ -78,7 +131,7 @@ public class UserController {
             mailservice.sendEmail(emailRequest.getEmail(), subject, content);
             return ResponseEntity.ok("MailSend");
         } catch (Exception e) {
-            e.printStackTrace(); // Log exception for debugging
+            e.printStackTrace(); 
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to send email");
         }
     }

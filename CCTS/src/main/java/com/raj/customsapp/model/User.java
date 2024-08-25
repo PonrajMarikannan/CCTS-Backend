@@ -15,18 +15,18 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer userId;
 
-    @Column(unique = true, nullable = false)
+    @Column(nullable = false)
     private String username;
 
+    @Column(name="email",unique = true)
+    private String email;
+    
     @Column(nullable = false)
     private String password;
     
     @Column(name="role",nullable = false)
 	private String role;
 
-    @Column(name="email")
-    private String email;
-    
     
 	public Integer getUserId() {
 		return userId;

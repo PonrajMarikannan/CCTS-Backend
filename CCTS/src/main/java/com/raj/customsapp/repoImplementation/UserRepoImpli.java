@@ -36,6 +36,11 @@ public class UserRepoImpli implements UserRepo {
 		return eManager.find(User.class, id);
 	}
 
+	@Override
+	public void update(User user) {
+		eManager.persist(user);
+	}
+
 }
 	
 

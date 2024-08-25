@@ -2,6 +2,8 @@ package com.raj.customsapp.serviceImpl;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import com.raj.customsapp.model.Ship;
 import com.raj.customsapp.model.User;
 import com.raj.customsapp.repository.UserRepo;
 import com.raj.customsapp.service.UserService;
@@ -25,5 +27,11 @@ public class UserServiceImpl implements UserService {
 	public User getUser(int id) {
 		return repo.findById(id);
 	}
+
+	public void updatePassword(User user) {
+			repo.update(user);
+	}
+		
+	
     
 }
